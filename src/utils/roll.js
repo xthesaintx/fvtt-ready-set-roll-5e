@@ -1,5 +1,6 @@
 import { MODULE_SHORT } from "../module/const.js";
 import { CoreUtility } from "./core.js";
+import { LogUtility } from "./log.js";
 import { SETTING_NAMES, SettingsUtility } from "./settings.js";
 
 /**
@@ -49,7 +50,8 @@ export const CRIT_TYPE = {
  */
 export class RollUtility {
     static processRoll(config, dialog, message) {
-        if (message.data.flags[MODULE_SHORT]?.processed) return;
+        const existingFlags = message?.flags ?? message?.data?.flags ?? {};
+        if (existingFlags[MODULE_SHORT]?.processed) return;
 
         const keys = {
             normal: CoreUtility.areKeysPressed(config.event, "skipDialogNormal"),
@@ -63,13 +65,23 @@ export class RollUtility {
             config.flavor = `${CoreUtility.localize("DND5E.ToolPromptTitle", { tool: CoreUtility.localize("DND5E.Concentration") })}`;
         }
 
-        message.data.flags[MODULE_SHORT] = { 
+        const moduleFlags = {
             quickRoll: SettingsUtility.getSettingValue(SETTING_NAMES.QUICK_VANILLA_ENABLED) || !(dialog.configure ?? true),
             advantage: keys.advantage,
             disadvantage: keys.disadvantage,
             isConcentration: config.isConcentration,
             processed: true
         };
+
+        message.rollMode ??= game.settings.get("core", "rollMode");
+
+        if (message.flags) {
+            message.flags[MODULE_SHORT] = moduleFlags;
+        }
+
+        message.data ??= {};
+        message.data.flags ??= {};
+        message.data.flags[MODULE_SHORT] = moduleFlags;
     }
 
     static processActivity(usageConfig, dialogConfig, messageConfig) {
@@ -79,18 +91,28 @@ export class RollUtility {
             disadvantage: CoreUtility.areKeysPressed(usageConfig.event, "skipDialogDisadvantage")
         };
 
-        const fastForward = !(keys.normal || (usageConfig.vanilla ?? false))
-        dialogConfig.configure = usageConfig.hasOwnProperty('spell')
-            || (usageConfig.scaling !== undefined && usageConfig.scaling !== false)
-            || messageConfig.data?.flags?.dnd5e?.activity?.type === 'order' 
-            || !fastForward;
+        const fastForward = !(keys.normal || (usageConfig.vanilla ?? false));
+        const activityType = messageConfig?.flags?.dnd5e?.activity?.type ?? messageConfig?.data?.flags?.dnd5e?.activity?.type;
+        dialogConfig.configure = activityType === "order" || !fastForward;
 
-        messageConfig.data.flags[MODULE_SHORT] = { 
+        const moduleFlags = {
             quickRoll: fastForward,
             advantage: keys.advantage,
             disadvantage: keys.disadvantage,
             processed: !fastForward
         };
+
+        messageConfig.rollMode ??= game.settings.get("core", "rollMode");
+
+        if (messageConfig.flags) {
+            messageConfig.flags[MODULE_SHORT] = moduleFlags;
+        } else {
+            messageConfig.flags = { [MODULE_SHORT]: moduleFlags };
+        }
+
+        messageConfig.data ??= {};
+        messageConfig.data.flags ??= {};
+        messageConfig.data.flags[MODULE_SHORT] = moduleFlags;
     }
 
     /**
@@ -107,6 +129,9 @@ export class RollUtility {
         if (!(roll.hasAdvantage || roll.hasDisadvantage)) {
             const forcedDiceCount = roll.options.elvenAccuracy ? 3 : 2;
             const d20BaseTerm = roll.terms.find(d => d.faces === 20);
+            if (!d20BaseTerm || forcedDiceCount <= d20BaseTerm.number) {
+                return roll;
+            }
             const d20Additional = await new Roll(`${forcedDiceCount - d20BaseTerm.number}d20${d20BaseTerm.modifiers.join('')}`).evaluate();
 
             await CoreUtility.tryRollDice3D(d20Additional);

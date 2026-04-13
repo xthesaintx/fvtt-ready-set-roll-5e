@@ -22,7 +22,6 @@ export const SETTING_NAMES = {
     DICE_REROLL_ENABLED: "enableDiceReroll",
     AGGREGATE_DAMAGE: "aggregateDamage",
     APPLY_DAMAGE_TO: "applyDamageTo",
-    ALWAYS_ROLL_MULTIROLL: "alwaysRollMulti",
     CONFIRM_RETRO_ADV: "confirmRetroAdv",
     CONFIRM_RETRO_CRIT: "confirmRetroCrit"
 }

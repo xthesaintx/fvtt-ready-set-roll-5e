@@ -148,8 +148,10 @@ export class CoreUtility {
      */
     static getRollSound() {
         let sound = undefined;
+        const diceSoundSetting = SETTING_NAMES.DICE_SOUNDS_ENABLED;
+        const areDiceSoundsEnabled = !diceSoundSetting || SettingsUtility.getSettingValue(diceSoundSetting);
 
-        if (!CoreUtility._lockRollSound && SettingsUtility.getSettingValue(SETTING_NAMES.DICE_SOUNDS_ENABLED)) {
+        if (!CoreUtility._lockRollSound && areDiceSoundsEnabled) {
             CoreUtility._lockRollSound = true;
             setTimeout(() => CoreUtility._lockRollSound = false, 300);
             

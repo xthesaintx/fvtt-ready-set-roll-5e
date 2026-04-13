@@ -4,8 +4,35 @@ import { CoreUtility } from "./core.js";
  * Utility class for handing configuration dialogs.
  */
 export class DialogUtility {
-    static getConfirmDialog(title, options) {
-        return new Promise(resolve => { 
+    static async getConfirmDialog(title, options = {}) {
+        const DialogV2 = foundry?.applications?.api?.DialogV2;
+
+        if (DialogV2?.confirm) {
+            const position = {
+                width: options?.width ?? 400
+            };
+            if (Number.isFinite(options?.top)) position.top = options.top;
+            if (Number.isFinite(options?.left)) position.left = options.left;
+
+            return DialogV2.confirm({
+                title,
+                content: "",
+                position,
+                yes: {
+                    label: CoreUtility.localize("Yes"),
+                    icon: "fa-solid fa-check",
+                    callback: () => true
+                },
+                no: {
+                    label: CoreUtility.localize("No"),
+                    icon: "fa-solid fa-xmark",
+                    callback: () => false,
+                    default: true
+                }
+            });
+        }
+
+        return new Promise(resolve => {
             const data = {
                 title,
                 content: "",
@@ -21,7 +48,8 @@ export class DialogUtility {
                         callback: () => { resolve(false); }
                     }
                 },
-                default: "yes"
+                default: "yes",
+                close: () => resolve(false)
             }
 
             new Dialog(data, options).render(true);
