@@ -101,8 +101,9 @@ export class HooksUtility {
                 if (flags) {
                     ActivityUtility.setRenderFlags(activity, { flags });
 
-                    // Prevent system auto-triggered attack/damage/heal rolls that would duplicate RSR-managed rolls.
-                    if (flags[MODULE_SHORT]?.quickRoll && ["attack", "damage", "heal"].includes(activity?.type)) {
+                    // Prevent system auto-triggered subsequent actions that would duplicate
+                    // RSR-managed roll handling on quick-roll activities.
+                    if (flags[MODULE_SHORT]?.quickRoll && ["attack", "damage", "heal", "save"].includes(activity?.type)) {
                         usageConfig.subsequentActions = false;
                     }
                 }
