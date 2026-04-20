@@ -74,12 +74,12 @@ export class ChatUtility {
             return;
         }
 
-        // dnd5e 5.3.0: For usage (ACTIVITY) messages, ChatMessage5e.renderHTML() calls
-        // this.system.getHTML() AFTER firing the renderChatMessageHTML hook. system.getHTML()
-        // completely replaces .message-content innerHTML with the rendered usage-card template,
-        // destroying any content RSR injects here. RSR's injection for usage cards is therefore
-        // deferred to the dnd5e.renderChatMessage hook (via processUsageChatMessage), which
-        // fires after system.getHTML() has finished and the DOM is stable.
+        
+        
+        
+        
+        
+        
         if (type === ROLL_TYPE.ACTIVITY) return;
 
         if (game.dice3d && game.dice3d.isEnabled() && message._dice3danimating) {
@@ -195,18 +195,18 @@ export class ChatUtility {
     static getMessageType(message) {
         const t = message.type;
 
-        // dnd5e 5.3.0: usage messages have type "usage" (plain string).
+        
         if (t === "usage" || t === "dnd5e.usage") return ROLL_TYPE.ACTIVITY;
 
-        // Roll messages use type "roll" and store the specific roll type in flags.
-        // message.system?.roll?.type is checked first as a future-proofing measure but
-        // dnd5e 5.3.0 does not register a system data model for "roll" typed messages,
-        // so flags.dnd5e.roll.type is the live path.
+        
+        
+        
+        
         if (t === "roll" || t === "dnd5e.roll") {
             return message.system?.roll?.type ?? message.flags?.dnd5e?.roll?.type ?? null;
         }
 
-        // Legacy V12 fallbacks for messages created before dnd5e 4.x.
+        
         if (message.flags?.dnd5e?.messageType === MESSAGE_TYPE.USAGE || !!message.flags?.dnd5e?.use) return ROLL_TYPE.ACTIVITY;
         if (message.flags?.dnd5e?.messageType === MESSAGE_TYPE.ROLL || !!message.flags?.dnd5e?.roll) {
             return message.flags?.dnd5e?.roll?.type ?? null;
@@ -216,22 +216,22 @@ export class ChatUtility {
     }
 
     static getActivityType(message) {
-        // dnd5e 5.3.0: message.system.activity is a getter on UsageMessageData that calls
-        // getAssociatedActivity(), so both paths return the same activity object.
-        // flags.dnd5e.activity.type is the reliable stored path for all message versions.
+        
+        
+        
         return message.flags?.dnd5e?.activity?.type ?? message.system?.activity?.type;
     }
 
-    // dnd5e 5.3.0: getAssociatedActor() is now a native ChatMessage5e method. Use it as the
-    // primary path for actor resolution. The manual speaker fallback is kept for edge cases
-    // where the message is not a full ChatMessage5e instance (e.g. pre-create hooks).
+    
+    
+    
     static getActorFromMessage(message) {
         if (typeof message.getAssociatedActor === "function") {
             const actor = message.getAssociatedActor();
             if (actor) return actor;
         }
 
-        // Manual fallback using speaker data.
+        
         if (message.speaker?.token && message.speaker?.scene) {
             const token = game.scenes.get(message.speaker.scene)?.tokens?.get(message.speaker.token);
             if (token?.actor) return token.actor;
@@ -377,9 +377,9 @@ function _dedupeSaveButtons(html) {
 async function _injectContent(message, type, html) {
     LogUtility.log("Injecting content into chat message");
     
-    // dnd5e 5.3.0: getOriginatingMessage() is a native ChatMessage5e method that returns
-    // the usage card a roll message was spawned from, or `this` when no link exists.
-    // We only treat it as a real parent when it is a different message.
+    
+    
+    
     let parent = null;
     if (typeof message.getOriginatingMessage === "function") {
         const origin = message.getOriginatingMessage();
@@ -414,20 +414,20 @@ async function _injectContent(message, type, html) {
                 enricher.remove();
                 break;
             }
-            // falls through to ATTACK when item id is present
+            
         case ROLL_TYPE.ATTACK:
             if (parent && parent.flags[MODULE_SHORT] && message.isAuthor) {
                 parent.flags.dnd5e ??= {};
                 if (type === ROLL_TYPE.ATTACK) {
                     parent.flags[MODULE_SHORT].renderAttack = true;
-                    // dnd5e 5.3.0: roll data lives in flags.dnd5e.roll; system.roll is
-                    // undefined since there is no data model for "roll" typed messages.
+                    
+                    
                     parent.flags.dnd5e.roll = message.flags?.dnd5e?.roll ?? message.system?.roll;
-                    // dnd5e 5.3.0: do NOT set parent.flags.dnd5e.originatingMessage to
-                    // parent.id — that would make getOriginatingMessage() return the usage
-                    // card itself for all future lookups, breaking the registry. The
-                    // incoming roll message is deleted below, so there is no value in
-                    // registering it with the MessageRegistry either.
+                    
+                    
+                    
+                    
+                    
                 }
 
                 if (type === ROLL_TYPE.DAMAGE) {
@@ -483,8 +483,8 @@ async function _injectContent(message, type, html) {
         case ROLL_TYPE.ACTIVITY:
             if (!message.isContentVisible) return;
 
-            // Defensive clean-up: if this card is processed more than once in the same
-            // render cycle, prevent duplicated RSR sections and repeated save actions.
+            
+            
             html.find('.rsr-section-attack, .rsr-section-damage, .rsr-section-formula, .rsr-concentration-buttons, .rsr-supplement').remove();
             _dedupeSaveButtons(html);
 
@@ -548,20 +548,20 @@ async function _injectAttackRoll(message, html) {
 
     roll.options.displayChallenge = message.flags[MODULE_SHORT].displayAttackResult;
 
-    // dnd5e 5.3.0: Use getAssociatedActor() instead of game.actors.get(speaker.actor) so
-    // that token actors (which are not in game.actors) are correctly resolved. Previously
-    // this always returned null for unlinked tokens, causing hideFinalAttack to silently
-    // default to false for GMs viewing other players' rolls.
+    
+    
+    
+    
     const actor = ChatUtility.getActorFromMessage(message);
     roll.options.hideFinalAttack = SettingsUtility.getSettingValue(SETTING_NAMES.HIDE_FINAL_RESULT_ENABLED) && !actor?.isOwner;
 
     const render = await RenderUtility.render(TEMPLATE.MULTIROLL, { roll, key: ROLL_TYPE.ATTACK });
     const chatData = await roll.toMessage({}, { create: false });
-    // Foundry V14 removed CONST.CHAT_MESSAGE_TYPES entirely. The previous workaround of
-    // setting chatData.type to the numeric OOC value now coerces to the string "1", which
-    // fails ChatMessage5e's strict type validation and throws a DataModelValidationError
-    // before renderHTML() is ever reached. roll.toMessage() already sets type:"roll" which
-    // is a valid Foundry V14 type, so we leave it alone.
+    
+    
+    
+    
+    
 
     const rollHTML = $(await new ChatMessage5e(chatData).renderHTML()).find('.dice-roll');   
     rollHTML.find('.dice-total').replaceWith(render);
@@ -572,7 +572,7 @@ async function _injectAttackRoll(message, html) {
         rollHTML.find('.dice-formula').text("1d20 + " + CoreUtility.localize(`${MODULE_SHORT}.chat.hide`));
     }   
 
-    // dnd5e 5.3.0: getAssociatedActor() correctly resolves token actors.
+    
     const ammo = ChatUtility.getActorFromMessage(message)?.items?.get(message.flags[MODULE_SHORT].ammunition)?.name;
 
     const sectionHTML = $(await RenderUtility.render(TEMPLATE.SECTION,
@@ -596,7 +596,7 @@ async function _injectFormulaRoll(message, html) {
     if (!roll) return;
 
     const chatData = await roll.toMessage({}, { create: false });
-    // Foundry V14: see comment in _injectAttackRoll. type:"roll" is set by toMessage().
+    
 
     const rollHTML = $(await new ChatMessage5e(chatData).renderHTML()).find('.dice-roll');
     rollHTML.find('.dice-tooltip').prepend(rollHTML.find('.dice-formula'));
@@ -619,7 +619,7 @@ async function _injectDamageRoll(message, html) {
     if (!rolls || rolls.length === 0) return;
 
     const chatData = await CONFIG.Dice.DamageRoll.toMessage(rolls, {}, { create: false });
-    // Foundry V14: see comment in _injectAttackRoll. type:"roll" is set by toMessage().
+    
     const rendered = $(await new ChatMessage5e(chatData).renderHTML());
     const rollHTML = rendered.find('.dice-roll').first();
     const nativeDamageApplication = rendered.find('damage-application').first();
@@ -644,7 +644,7 @@ async function _injectDamageRoll(message, html) {
     
     $(sectionHTML).append(rollHTML);
     if (nativeDamageApplication.length) {
-        // Preserve dnd5e's native damage tray (Selected/Targeted + Apply) when available.
+        
         $(sectionHTML).append(nativeDamageApplication);
     }
     _safeInsert(sectionHTML, html);
@@ -699,8 +699,8 @@ async function _injectBreakConcentrationButton(message, html) {
 }
 
 async function _injectApplyDamageButtons(message, html) {
-    // In dnd5e 5.3+/Foundry 14, preserve the native damage-application tray and
-    // avoid duplicating apply UIs.
+    
+    
     if (html.find('damage-application').length) return;
 
     const render = await RenderUtility.render(TEMPLATE.DAMAGE_BUTTONS, {});
@@ -940,7 +940,7 @@ async function _processRetroCritButtonEvent(message, event) {
         const rolls = originalRolls.filter(r => r instanceof CONFIG.Dice.DamageRoll || r.class === "DamageRoll");
         const crits = await ActivityUtility.getDamageFromMessage(message);
 
-        // Retain original behavior for MIDI users if required
+        
         if (CoreUtility.hasModule(MODULE_MIDI)) {
             newRolls = originalRolls;
         }

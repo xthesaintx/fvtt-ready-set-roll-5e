@@ -24,15 +24,15 @@ export class ActivityUtility {
      * messages) or when the system data model is not yet initialised (preCreate hooks).
      */
     static _getActivityFromMessage(message) {
-        // Primary: native ChatMessage5e method available on instantiated documents.
+        
         if (typeof message.getAssociatedActivity === "function") {
             const act = message.getAssociatedActivity();
             if (act) return act;
         }
 
-        // Fallback A: resolve via item UUID + activity id (covers preCreate where the
-        // document method above may not yet exist, or may return null because flags
-        // haven't been saved to the database yet and fromUuidSync can't find the UUID).
+        
+        
+        
         let item = null;
         if (typeof message.getAssociatedItem === "function") item = message.getAssociatedItem();
         if (!item && message.flags?.dnd5e?.item?.uuid) item = fromUuidSync(message.flags.dnd5e.item.uuid, { strict: false });
@@ -44,9 +44,9 @@ export class ActivityUtility {
             if (act) return act;
         }
 
-        // Fallback B: resolve directly via activity UUID stored in flags.
-        // dnd5e 5.3.0: the activity UUID is stored at flags.dnd5e.activity.uuid
-        // (set by Activity#messageFlags getter, line 16711 of dnd5e.mjs).
+        
+        
+        
         const activityUuid = message.flags?.dnd5e?.activity?.uuid;
         if (activityUuid) {
             const act = fromUuidSync(activityUuid, { strict: false });
@@ -145,8 +145,8 @@ export class ActivityUtility {
 
             if (attackRolls.length > 0) {
                 currentRolls = _injectRollsToArray(currentRolls, attackRolls, CONFIG.Dice.D20Roll);
-                // dual flag means a multi-roll was enforced by ALWAYS_ROLL_MULTIROLL;
-                // in that case isCritical is determined later during rendering.
+                
+                
                 message.flags[MODULE_SHORT].isCritical = message.flags[MODULE_SHORT].dual
                     ? false
                     : attackRolls[0].isCritical;
@@ -266,11 +266,11 @@ export class ActivityUtility {
 
         if (!activity || !actor || typeof activity.rollDamage !== "function") return null;
 
-        // Resolve scaling from system data (5.3.0 canonical) with flags fallback.
+        
         const scaling = message.system?.scaling ?? message.flags?.dnd5e?.scaling ?? 0;
 
-        // Stamp scaling onto the item clone so rollData.scaling is populated correctly
-        // for formula resolution (see getDamageConfig → getRollData path).
+        
+        
         activity.item.flags.dnd5e ??= {};
         if (activity.item.flags.dnd5e.scaling !== scaling) {
             activity.item.flags.dnd5e.scaling = scaling;
@@ -278,7 +278,7 @@ export class ActivityUtility {
 
         const config = {
             isCritical: message.flags[MODULE_SHORT].isCritical ?? false,
-            // Pass the live Item document so rollDamage can read ammo properties.
+            
             ammunition: actor.items?.get(message.flags[MODULE_SHORT].ammunition),
             scaling,
             midiOptions: CoreUtility.hasModule(MODULE_MIDI)
